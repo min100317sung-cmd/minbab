@@ -4,7 +4,399 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
   <title>평택 동일공고 주변 맛집 지도</title>
-  <link rel="stylesheet" href="/src/style.css" />
+  <style>
+@font-face {
+  font-family: 'Pretendard';
+  src: local('Pretendard'), local('Apple SD Gothic Neo'), local('Malgun Gothic');
+}
+
+:root {
+  --paper: #f5f3ee;
+  --ink: #1b1b18;
+  --ink-soft: #6b6559;
+  --deep: #1f3a34;
+  --deep-2: #16302b;
+  --amber: #e2a73e;
+  --line: #e2ddd0;
+  --white: #ffffff;
+
+  --c-korean: #b23a2e;
+  --c-chinese: #d98a2b;
+  --c-japanese: #2e7d6b;
+  --c-western: #3a5a9b;
+
+  --radius: 14px;
+  --sheet-width: 400px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+}
+
+#app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ---------- Top bar ---------- */
+.topbar {
+  background: var(--deep);
+  color: var(--white);
+  padding: 14px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  z-index: 20;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-mark {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  background: var(--amber);
+  color: var(--deep-2);
+  padding: 3px 7px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.brand-text h1 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.brand-sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+
+.category-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.06);
+  color: var(--white);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.cat-pill:hover { background: rgba(255,255,255,0.14); }
+.cat-pill:active { transform: scale(0.97); }
+
+.cat-pill .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.cat-pill[data-color="korean"] .dot { background: var(--c-korean); }
+.cat-pill[data-color="chinese"] .dot { background: var(--c-chinese); }
+.cat-pill[data-color="japanese"] .dot { background: var(--c-japanese); }
+.cat-pill[data-color="western"] .dot { background: var(--c-western); }
+
+.cat-pill.active {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: var(--deep-2);
+}
+.cat-pill.active .dot { background: var(--deep-2); }
+
+.cat-clear {
+  margin-left: auto;
+  opacity: 0.75;
+  font-weight: 500;
+}
+
+/* ---------- Map area ---------- */
+.map-area {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+.status-chip, .hint-chip {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(27,27,24,0.85);
+  color: var(--white);
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  z-index: 10;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+}
+
+.status-chip { top: 14px; }
+.hint-chip {
+  bottom: 18px;
+  background: rgba(255,255,255,0.92);
+  color: var(--ink-soft);
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 11.5px;
+}
+
+/* ---------- Place sheet (desktop: side panel) ---------- */
+.sheet-backdrop {
+  display: none;
+}
+
+.place-sheet {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: var(--sheet-width);
+  max-width: 92vw;
+  background: var(--white);
+  border-left: 1px solid var(--line);
+  box-shadow: -8px 0 24px rgba(0,0,0,0.08);
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(.4,0,.2,1);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+}
+
+.place-sheet.open { transform: translateX(0); }
+
+.sheet-handle { display: none; }
+
+.sheet-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: var(--paper);
+  color: var(--ink-soft);
+  font-size: 14px;
+  cursor: pointer;
+  z-index: 2;
+}
+.sheet-close:hover { background: var(--line); }
+
+.sheet-body {
+  padding: 46px 22px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.sheet-empty {
+  color: var(--ink-soft);
+  font-size: 13.5px;
+  line-height: 1.6;
+  margin-top: 40%;
+  text-align: center;
+}
+
+/* ---- place card content ---- */
+.place-cat-tag {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  color: var(--white);
+  margin-bottom: 10px;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+
+.place-name {
+  margin: 0 0 6px;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.place-category {
+  margin: 0 0 16px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+.place-info-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 18px;
+  border-top: 1px solid var(--line);
+}
+
+.place-info-list li {
+  display: flex;
+  gap: 10px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.place-info-list .label {
+  flex: 0 0 52px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  padding-top: 1px;
+}
+
+.place-info-list a { color: var(--deep); font-weight: 600; }
+
+.place-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.btn {
+  flex: 1;
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+}
+.btn:hover { background: var(--line); }
+
+.btn-primary {
+  background: var(--deep);
+  color: var(--white);
+  border-color: var(--deep);
+}
+.btn-primary:hover { background: var(--deep-2); }
+
+.rating-note {
+  font-size: 12px;
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  line-height: 1.55;
+  margin-bottom: 18px;
+}
+
+.roadview-wrap {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+#roadviewBox {
+  width: 100%;
+  height: 220px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #ddd;
+  display: none;
+}
+
+#roadviewBox.show { display: block; }
+
+.roadview-msg {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-top: 8px;
+}
+
+/* ---------- Kakao overlay tweaks ---------- */
+.marker-cluster-label {
+  font-family: ui-monospace, monospace;
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 720px) {
+  :root { --sheet-width: 100%; }
+
+  .brand-sub { display: none; }
+  .cat-pill { padding: 7px 12px; font-size: 13px; }
+
+  .sheet-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: 25;
+  }
+  .sheet-backdrop.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .place-sheet {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: 100%;
+    height: 72vh;
+    border-left: none;
+    border-top: 1px solid var(--line);
+    border-radius: 18px 18px 0 0;
+    transform: translateY(100%);
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.15);
+  }
+  .place-sheet.open { transform: translateY(0); }
+
+  .sheet-handle {
+    display: block;
+    width: 40px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--line);
+    margin: 10px auto 0;
+  }
+
+  .sheet-body { padding-top: 18px; }
+  .sheet-close { top: 10px; }
+}
+
+  </style>
 </head>
 <body>
   <div id="app">
@@ -58,6 +450,319 @@
     </aside>
   </div>
 
-  <script type="module" src="/src/main.js"></script>
+  <script>
+    // 카카오 JavaScript 키 (카카오 개발자 콘솔 > 플랫폼 > Web 에 배포 도메인을 등록해야 정상 작동합니다)
+    window.KAKAO_APP_KEY = "eafd05cf388561167f1efbc2f0a87f5b";
+  </script>
+  <script>
+const KAKAO_APP_KEY = window.KAKAO_APP_KEY;
+
+const CATEGORY_COLORS = {
+  한식: '#b23a2e',
+  중식: '#d98a2b',
+  일식: '#2e7d6b',
+  양식: '#3a5a9b',
+};
+
+const SCHOOL_QUERY_PRIMARY = '경기 평택시 동일공업고등학교';
+const SCHOOL_QUERY_FALLBACK = '동일공업고등학교';
+// 검색이 모두 실패할 경우를 대비한 대략 좌표 (평택시 중심부)
+const FALLBACK_CENTER = { lat: 36.9925, lng: 127.0885 };
+
+let map, ps, clusterer, roadviewClient, roadview;
+let markers = [];
+let activeCategory = null;
+let idleTimer = null;
+
+const els = {
+  map: document.getElementById('map'),
+  categoryRow: document.getElementById('categoryRow'),
+  clearBtn: document.getElementById('clearBtn'),
+  statusChip: document.getElementById('statusChip'),
+  statusText: document.getElementById('statusText'),
+  hintChip: document.getElementById('hintChip'),
+  sheet: document.getElementById('placeSheet'),
+  sheetBody: document.getElementById('sheetBody'),
+  sheetClose: document.getElementById('sheetClose'),
+  sheetHandle: document.getElementById('sheetHandle'),
+  backdrop: document.getElementById('sheetBackdrop'),
+};
+
+function loadKakaoSdk() {
+  return new Promise((resolve, reject) => {
+    if (!KAKAO_APP_KEY) {
+      reject(new Error('NO_KEY'));
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_APP_KEY}&autoload=false&libraries=services,clusterer`;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('SDK_LOAD_FAIL'));
+    document.head.appendChild(script);
+  });
+}
+
+function showStatus(text) {
+  els.statusText.textContent = text;
+  els.statusChip.hidden = false;
+}
+function hideStatus() {
+  els.statusChip.hidden = true;
+}
+
+async function init() {
+  try {
+    await loadKakaoSdk();
+  } catch (e) {
+    renderFatalError(e.message);
+    return;
+  }
+
+  window.kakao.maps.load(() => {
+    const kakao = window.kakao;
+
+    map = new kakao.maps.Map(els.map, {
+      center: new kakao.maps.LatLng(FALLBACK_CENTER.lat, FALLBACK_CENTER.lng),
+      level: 3,
+    });
+
+    ps = new kakao.maps.services.Places();
+    clusterer = new kakao.maps.MarkerClusterer({
+      map,
+      averageCenter: true,
+      minLevel: 4,
+    });
+    roadviewClient = new kakao.maps.RoadviewClient();
+
+    centerOnSchool();
+    bindCategoryButtons();
+    bindMapIdle();
+    bindSheetControls();
+  });
+}
+
+function centerOnSchool() {
+  const kakao = window.kakao;
+  showStatus('동일공업고등학교 위치 확인 중…');
+
+  ps.keywordSearch(SCHOOL_QUERY_PRIMARY, (data, status) => {
+    if (status === kakao.maps.services.Status.OK && data.length > 0) {
+      applySchoolCenter(data[0]);
+      return;
+    }
+    ps.keywordSearch(SCHOOL_QUERY_FALLBACK, (data2, status2) => {
+      if (status2 === kakao.maps.services.Status.OK && data2.length > 0) {
+        applySchoolCenter(data2[0]);
+      } else {
+        hideStatus();
+      }
+    });
+  });
+}
+
+function applySchoolCenter(place) {
+  const kakao = window.kakao;
+  map.setCenter(new kakao.maps.LatLng(place.y, place.x));
+  map.setLevel(3);
+  hideStatus();
+}
+
+function bindCategoryButtons() {
+  const pills = els.categoryRow.querySelectorAll('.cat-pill[data-cat]');
+
+  pills.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const cat = btn.dataset.cat;
+
+      if (activeCategory === cat) {
+        deactivateAll(pills);
+        return;
+      }
+
+      activeCategory = cat;
+      pills.forEach((b) => b.classList.toggle('active', b === btn));
+      els.hintChip.hidden = false;
+      searchCategory();
+    });
+  });
+
+  els.clearBtn.addEventListener('click', () => deactivateAll(pills));
+}
+
+function deactivateAll(pills) {
+  activeCategory = null;
+  pills.forEach((b) => b.classList.remove('active'));
+  els.hintChip.hidden = true;
+  clearMarkers();
+}
+
+function bindMapIdle() {
+  const kakao = window.kakao;
+  kakao.maps.event.addListener(map, 'idle', () => {
+    if (!activeCategory) return;
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => searchCategory(), 350);
+  });
+}
+
+function clearMarkers() {
+  if (clusterer) clusterer.clear();
+  markers.forEach((m) => m.setMap(null));
+  markers = [];
+}
+
+function makeMarkerImage(color) {
+  const kakao = window.kakao;
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="30" height="38" viewBox="0 0 30 38">
+      <path d="M15 0C6.7 0 0 6.7 0 15c0 10.5 15 23 15 23s15-12.5 15-23C30 6.7 23.3 0 15 0z" fill="${color}"/>
+      <circle cx="15" cy="15" r="6" fill="#fff"/>
+    </svg>`;
+  const url = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+  return new kakao.maps.MarkerImage(url, new kakao.maps.Size(30, 38), {
+    offset: new kakao.maps.Point(15, 38),
+  });
+}
+
+function searchCategory() {
+  if (!activeCategory || !map) return;
+  const kakao = window.kakao;
+  showStatus(`"${activeCategory}" 검색 중…`);
+
+  ps.keywordSearch(
+    activeCategory,
+    (data, status) => {
+      hideStatus();
+      if (status !== kakao.maps.services.Status.OK) {
+        clearMarkers();
+        return;
+      }
+
+      clearMarkers();
+      const color = CATEGORY_COLORS[activeCategory] || '#333';
+      const image = makeMarkerImage(color);
+      const searchedCategory = activeCategory;
+
+      const newMarkers = data.map((place) => {
+        const pos = new kakao.maps.LatLng(place.y, place.x);
+        const marker = new kakao.maps.Marker({ position: pos, image });
+        kakao.maps.event.addListener(marker, 'click', () =>
+          openPlaceSheet(place, searchedCategory)
+        );
+        return marker;
+      });
+
+      markers = newMarkers;
+      clusterer.addMarkers(newMarkers);
+    },
+    {
+      bounds: map.getBounds(),
+      size: 15,
+    }
+  );
+}
+
+function openPlaceSheet(place, category) {
+  const color = CATEGORY_COLORS[category] || '#333';
+
+  els.sheetBody.innerHTML = `
+    <span class="place-cat-tag" style="background:${color}">${category}</span>
+    <h2 class="place-name">${escapeHtml(place.place_name)}</h2>
+    <p class="place-category">${escapeHtml(place.category_name || '')}</p>
+
+    <ul class="place-info-list">
+      <li><span class="label">주소</span><span>${escapeHtml(
+        place.road_address_name || place.address_name || '정보 없음'
+      )}</span></li>
+      <li><span class="label">전화</span><span>${escapeHtml(
+        place.phone || '등록된 번호 없음'
+      )}</span></li>
+    </ul>
+
+    <div class="place-actions">
+      <a class="btn btn-primary" href="${place.place_url}" target="_blank" rel="noopener">
+        카카오맵에서 평점·리뷰 보기
+      </a>
+    </div>
+
+    <p class="rating-note">
+      카카오맵 API는 평점 수치를 직접 제공하지 않아요. 위 버튼을 누르면 카카오맵 상세 페이지에서
+      실제 평점과 방문자 리뷰를 확인할 수 있어요.
+    </p>
+
+    <div class="roadview-wrap">
+      <button class="btn" id="roadviewToggle">📍 로드뷰 보기</button>
+      <div id="roadviewBox"></div>
+      <p class="roadview-msg" id="roadviewMsg"></p>
+    </div>
+  `;
+
+  const toggleBtn = document.getElementById('roadviewToggle');
+  const box = document.getElementById('roadviewBox');
+  const msg = document.getElementById('roadviewMsg');
+  let loaded = false;
+
+  toggleBtn.addEventListener('click', () => {
+    const showing = box.classList.toggle('show');
+    toggleBtn.textContent = showing ? '📍 로드뷰 숨기기' : '📍 로드뷰 보기';
+    if (showing && !loaded) {
+      loaded = true;
+      loadRoadview(place, box, msg);
+    }
+  });
+
+  openSheet();
+}
+
+function loadRoadview(place, box, msg) {
+  const kakao = window.kakao;
+  const pos = new kakao.maps.LatLng(place.y, place.x);
+  msg.textContent = '로드뷰 위치 확인 중…';
+
+  roadviewClient.getNearestPanoId(pos, 50, (panoId) => {
+    if (!panoId) {
+      msg.textContent = '이 위치 주변에는 로드뷰 정보가 없어요.';
+      return;
+    }
+    if (!roadview) {
+      roadview = new kakao.maps.Roadview(box);
+    }
+    roadview.setPanoId(panoId, pos);
+    msg.textContent = '';
+  });
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str ?? '';
+  return div.innerHTML;
+}
+
+/* ---------- sheet open/close ---------- */
+function openSheet() {
+  els.sheet.classList.add('open');
+  els.backdrop.classList.add('show');
+}
+function closeSheet() {
+  els.sheet.classList.remove('open');
+  els.backdrop.classList.remove('show');
+}
+function bindSheetControls() {
+  els.sheetClose.addEventListener('click', closeSheet);
+  els.backdrop.addEventListener('click', closeSheet);
+  els.sheetHandle.addEventListener('click', closeSheet);
+}
+
+function renderFatalError(reason) {
+  const msg =
+    reason === 'NO_KEY'
+      ? '카카오 JavaScript 키가 설정되지 않았어요. .env 파일의 VITE_KAKAO_APP_KEY 값을 확인해주세요.'
+      : '카카오 지도를 불러오지 못했어요. 카카오 개발자 콘솔 &gt; 플랫폼 &gt; Web 에 현재 도메인이 등록되어 있는지 확인해주세요.';
+  els.map.innerHTML = `<div style="padding:40px;text-align:center;color:#6b6559;font-size:14px;line-height:1.6;">${msg}</div>`;
+}
+
+init();
+
+  </script>
 </body>
 </html>
