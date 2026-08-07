@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+  <title>평택 동일공고 주변 맛집 지도</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">MAP</span>
+        <div class="brand-text">
+          <h1>동일공고 주변 맛집</h1>
+          <p class="brand-sub">경기도 평택시 · 카카오맵 기반</p>
+        </div>
+      </div>
+
+      <div class="category-row" id="categoryRow">
+        <button class="cat-pill" data-cat="한식" data-color="korean">
+          <span class="dot"></span>한식
+        </button>
+        <button class="cat-pill" data-cat="중식" data-color="chinese">
+          <span class="dot"></span>중식
+        </button>
+        <button class="cat-pill" data-cat="일식" data-color="japanese">
+          <span class="dot"></span>일식
+        </button>
+        <button class="cat-pill" data-cat="양식" data-color="western">
+          <span class="dot"></span>양식
+        </button>
+        <button class="cat-pill cat-clear" id="clearBtn">전체 해제</button>
+      </div>
+    </header>
+
+    <main class="map-area">
+      <div id="map"></div>
+
+      <div class="status-chip" id="statusChip" hidden>
+        <span id="statusText">검색 중…</span>
+      </div>
+
+      <div class="hint-chip" id="hintChip" hidden>
+        지도를 움직이면 화면 안에서 자동으로 다시 검색해요
+      </div>
+    </main>
+
+    <div class="sheet-backdrop" id="sheetBackdrop"></div>
+
+    <aside class="place-sheet" id="placeSheet">
+      <div class="sheet-handle" id="sheetHandle"></div>
+      <button class="sheet-close" id="sheetClose" aria-label="닫기">✕</button>
+
+      <div class="sheet-body" id="sheetBody">
+        <p class="sheet-empty">지도의 음식점 마커를 클릭하면<br />여기에 정보가 표시돼요.</p>
+      </div>
+    </aside>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
